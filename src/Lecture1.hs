@@ -108,7 +108,7 @@ subString start end str =
             if end < 0
             then -1
             else end + 1
-    in drop startCorrect (take endcorrect str)
+    in take (endcorrect - startCorrect) (drop startCorrect str)
 
 {- | Write a function that takes a String — space separated numbers,
 and finds a sum of the numbers inside this string.
@@ -119,14 +119,7 @@ and finds a sum of the numbers inside this string.
 The string contains only spaces and/or numbers.
 -}
 strSum :: String -> Int 
-strSum str = sumList (convertStrListToInt (words str))
-    where
-        sumList :: [Int] -> Int
-        sumList [] = 0
-        sumList (x:xs) = x + sumList xs
-
-        convertStrListToInt :: [String] -> [Int]
-        convertStrListToInt = map read
+strSum str = sum (map read (words str))
 
 {- | Write a function that takes a number and a list of numbers and
 returns a string, saying how many elements of the list are strictly
