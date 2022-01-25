@@ -40,7 +40,7 @@ module Lecture2
     , constantFolding
     ) where
 import Data.Char (isSpace)
-import GHC.Conc (BlockReason(BlockedOnBlackHole))
+import Data.List (dropWhileEnd)
 
 {- | Implement a function that finds a product of all the numbers in
 the list. But implement a lazier version of this function: if you see
@@ -80,8 +80,19 @@ return the removed element.
 removeAt :: Int -> [a] -> (Maybe a, [a])
 removeAt _ [] = (Nothing, [])
 removeAt n xs 
-  | n > length xs = (Nothing, xs)
-  | otherwise     = (Just (xs !! n), take n xs ++ drop (n + 1) xs)
+  | n < 0 = (Nothing, xs)
+  | otherwise     = (findAtIndex 0 xs, removeAtIndex 0 xs)
+  where 
+    findAtIndex :: Int -> [a] -> Maybe a
+    findAtIndex _ [] = Nothing 
+    findAtIndex i (x:xxs)
+      | i == n = Just x
+      | otherwise = findAtIndex (i + 1) xxs
+    removeAtIndex :: Int -> [a] -> [a]
+    removeAtIndex _ [] = []
+    removeAtIndex i (x:xxs)
+      | i == n = xxs
+      | otherwise = x: removeAtIndex (i + 1) xxs
 
 
 {- | Write a function that takes a list of lists and returns only
@@ -111,7 +122,7 @@ spaces.
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
 dropSpaces :: [Char] -> [Char]
-dropSpaces = filter (not . isSpace)
+dropSpaces l = takeWhile (not . isSpace) (dropWhile isSpace l)
 
 {- |
 
