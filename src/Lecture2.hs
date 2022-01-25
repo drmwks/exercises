@@ -39,6 +39,8 @@ module Lecture2
     , eval
     , constantFolding
     ) where
+import Data.Char (isSpace)
+import GHC.Conc (BlockReason(BlockedOnBlackHole))
 
 {- | Implement a function that finds a product of all the numbers in
 the list. But implement a lazier version of this function: if you see
@@ -48,7 +50,11 @@ zero, you can stop calculating product and return 0 immediately.
 84
 -}
 lazyProduct :: [Int] -> Int
-lazyProduct = error "TODO"
+lazyProduct [] = 1
+lazyProduct (x:xs)
+    | x == 0    = 0
+    | otherwise = x * lazyProduct xs
+
 
 {- | Implement a function that duplicates every element in the list.
 
@@ -58,7 +64,8 @@ lazyProduct = error "TODO"
 "ccaabb"
 -}
 duplicate :: [a] -> [a]
-duplicate = error "TODO"
+duplicate [] = []
+duplicate (x:xs) = x : x : duplicate xs
 
 {- | Implement function that takes index and a list and removes the
 element at the given position. Additionally, this function should also
@@ -70,7 +77,12 @@ return the removed element.
 >>> removeAt 10 [1 .. 5]
 (Nothing,[1,2,3,4,5])
 -}
-removeAt = error "TODO"
+removeAt :: Int -> [a] -> (Maybe a, [a])
+removeAt _ [] = (Nothing, [])
+removeAt n xs 
+  | n > length xs = (Nothing, xs)
+  | otherwise     = (Just (xs !! n), take n xs ++ drop (n + 1) xs)
+
 
 {- | Write a function that takes a list of lists and returns only
 lists of even lengths.
@@ -81,7 +93,8 @@ lists of even lengths.
 ♫ NOTE: Use eta-reduction and function composition (the dot (.) operator)
   in this function.
 -}
-evenLists = error "TODO"
+evenLists :: [[a]] -> [[a]]
+evenLists = filter (even . length)
 
 {- | The @dropSpaces@ function takes a string containing a single word
 or number surrounded by spaces and removes all leading and trailing
@@ -97,7 +110,8 @@ spaces.
 
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
-dropSpaces = error "TODO"
+dropSpaces :: [Char] -> [Char]
+dropSpaces = filter (not . isSpace)
 
 {- |
 
@@ -154,13 +168,105 @@ You're free to define any helper functions.
 -}
 
 -- some help in the beginning ;)
+
+data Tresure = 
+  Gemstone |
+  Armor |
+  Candy
+
+showTresure :: Tresure -> String 
+showTresure tr = case tr of
+  Gemstone -> "Gemstone"
+  Armor -> "Armor"
+  Candy -> "Candy"
+
+-- A chest contains a non-zero amount of gold and a possible treasure.
+--     When defining the type of a treasure chest, you don't know what
+--     treasures it stores insight, so your chest data type must be able
+--     to contain any possible treasure.
+data Chest a = Chest 
+  {
+      chestGold :: Int,
+      chestTresure :: Maybe a
+  }
+
+showChest :: Chest Tresure -> String 
+showChest ch = case chestTresure ch of
+  Just tr -> "Gold = " ++ show (chestGold ch) ++ " Tresure = " ++ showTresure tr
+  Nothing -> "Gold = " ++ show (chestGold ch)
+  
+
+data Reward = Reward
+  {
+    rewardChest :: Chest Tresure,
+    rewardExperience :: Int
+  }
+
+showReward :: Reward -> String
+showReward r = "Experience = " ++ show (rewardExperience r) ++ " Chest = " ++ showChest (rewardChest r)
+
+type Attack = Int 
+type Health = Int 
+type Endurance = Int
+
 data Knight = Knight
-    { knightHealth    :: Int
-    , knightAttack    :: Int
-    , knightEndurance :: Int
+    { 
+      knightHealth    :: Health,
+      knightAttack    :: Attack,
+      knightEndurance :: Endurance
     }
 
-dragonFight = error "TODO"
+-- Experience is calculated based on the dragon type. A dragon can be
+--     either red, black or green.
+data DragonType 
+  = Red
+  | Black
+  | Green
+
+data Dragon = Dragon 
+    {
+      dragonType :: DragonType,
+      dragonHealth :: Health,
+      dragonFirePower :: Attack
+    }
+
+data FigthResult
+  = KnightDead
+  | KnightWin Reward
+  | KnightRun
+
+showFightResult :: FigthResult -> String 
+showFightResult fightResult = case fightResult of
+  KnightDead -> "Knight is dead"
+  KnightRun -> "Knight run"
+  KnightWin r -> "Knight win " ++ showReward r
+
+
+-- You can try it in ghci console with example:
+  -- ivan = Knight 50 10 10
+  -- dracosha = Dragon Black 50 5
+  -- showFightResult (dragonFight ivan dracosha)
+dragonFight :: Knight -> Dragon -> FigthResult
+dragonFight knigth dragon = fight 1 (dragonHealth dragon) (knightHealth knigth) 
+  where 
+    fight :: Int -> Health -> Attack -> FigthResult
+    fight strikeNo dHealth kHealth
+      | dHealth <= 0 = KnightWin (reward dragon)
+      | knightEndurance knigth < strikeNo = KnightRun
+      | kHealth <= 0 = KnightDead
+      | mod strikeNo 10 == 0 = fight (strikeNo + 1) (dHealth - knightAttack knigth) (kHealth - dragonFirePower dragon)
+      | otherwise = fight (strikeNo + 1) (dHealth - knightAttack knigth) kHealth
+
+-- Red dragons grant 100 experience points, black dragons — 150, and green — 250.
+
+-- Stomachs of green dragons contain extreme acid and they melt any
+-- treasure except gold. So green dragons has only gold as reward.
+-- All other dragons always contain treasure in addition to gold.
+reward :: Dragon -> Reward
+reward dragon = case dragonType dragon of 
+  Red -> Reward (Chest 1000 (Just Gemstone)) 100
+  Black -> Reward (Chest 2000 (Just Armor)) 150
+  Green -> Reward (Chest 5000 Nothing) 250
 
 ----------------------------------------------------------------------------
 -- Extra Challenges
@@ -181,7 +287,11 @@ False
 True
 -}
 isIncreasing :: [Int] -> Bool
-isIncreasing = error "TODO"
+isIncreasing [] = True 
+isIncreasing (x:y:xs)
+  | x < y = isIncreasing (y:xs)
+  | otherwise = False
+isIncreasing _ = True 
 
 {- | Implement a function that takes two lists, sorted in the
 increasing order, and merges them into new list, also sorted in the
@@ -194,7 +304,12 @@ verify that.
 [1,2,3,4,7]
 -}
 merge :: [Int] -> [Int] -> [Int]
-merge = error "TODO"
+merge [] [] = []
+merge [] ys = ys
+merge xs [] = xs
+merge (x:xs) (y:ys)
+  | x < y = x : merge xs (y : ys)
+  | otherwise = y : merge (x : xs) ys
 
 {- | Implement the "Merge Sort" algorithm in Haskell. The @mergeSort@
 function takes a list of numbers and returns a new list containing the
