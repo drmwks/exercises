@@ -25,7 +25,16 @@ module Lecture2
     , evenLists
     , dropSpaces
 
+    , Attack (..)
+    , Health (..)
+    , Endurance (..)
     , Knight (..)
+    , Dragon (..)
+    , showTresure
+    , showChest
+    , showReward
+    , showFightResult
+
     , dragonFight
 
       -- * Hard
@@ -40,7 +49,7 @@ module Lecture2
     , constantFolding
     ) where
 import Data.Char (isSpace)
-import Data.List (dropWhileEnd)
+import qualified Data.Bifunctor
 
 -- VVV If you need to import libraries, do it after this line ... VVV
 
@@ -55,9 +64,8 @@ zero, you can stop calculating product and return 0 immediately.
 -}
 lazyProduct :: [Int] -> Int
 lazyProduct [] = 1
-lazyProduct (x:xs)
-    | x == 0    = 0
-    | otherwise = x * lazyProduct xs
+lazyProduct (0 : _) = 0
+lazyProduct (x:xs) = x * lazyProduct xs
 
 
 {- | Implement a function that duplicates every element in the list.
@@ -83,12 +91,12 @@ return the removed element.
 -}
 removeAt :: Int -> [a] -> (Maybe a, [a])
 removeAt _ [] = (Nothing, [])
-removeAt n xs 
+removeAt n xs
   | n < 0 = (Nothing, xs)
   | otherwise     = (findAtIndex 0 xs, removeAtIndex 0 xs)
-  where 
+  where
     findAtIndex :: Int -> [a] -> Maybe a
-    findAtIndex _ [] = Nothing 
+    findAtIndex _ [] = Nothing
     findAtIndex i (x:xxs)
       | i == n = Just x
       | otherwise = findAtIndex (i + 1) xxs
@@ -126,7 +134,7 @@ spaces.
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
 dropSpaces :: [Char] -> [Char]
-dropSpaces l = takeWhile (not . isSpace) (dropWhile isSpace l)
+dropSpaces = takeWhile (not . isSpace) . dropWhile isSpace
 
 {- |
 
@@ -184,12 +192,12 @@ You're free to define any helper functions.
 
 -- some help in the beginning ;)
 
-data Tresure = 
+data Tresure =
   Gemstone |
   Armor |
   Candy
 
-showTresure :: Tresure -> String 
+showTresure :: Tresure -> String
 showTresure tr = case tr of
   Gemstone -> "Gemstone"
   Armor -> "Armor"
@@ -199,17 +207,17 @@ showTresure tr = case tr of
 --     When defining the type of a treasure chest, you don't know what
 --     treasures it stores insight, so your chest data type must be able
 --     to contain any possible treasure.
-data Chest a = Chest 
+data Chest a = Chest
   {
       chestGold :: Int,
       chestTresure :: Maybe a
   }
 
-showChest :: Chest Tresure -> String 
+showChest :: Chest Tresure -> String
 showChest ch = case chestTresure ch of
   Just tr -> "Gold = " ++ show (chestGold ch) ++ " Tresure = " ++ showTresure tr
   Nothing -> "Gold = " ++ show (chestGold ch)
-  
+
 
 data Reward = Reward
   {
@@ -220,12 +228,19 @@ data Reward = Reward
 showReward :: Reward -> String
 showReward r = "Experience = " ++ show (rewardExperience r) ++ " Chest = " ++ showChest (rewardChest r)
 
-type Attack = Int 
-type Health = Int 
-type Endurance = Int
+newtype Attack = Attack {
+  attack :: Int
+}
+newtype Health = Health {
+  health :: Int
+}
+newtype Endurance = Endurance {
+  endurance :: Int
+}
+
 
 data Knight = Knight
-    { 
+    {
       knightHealth    :: Health,
       knightAttack    :: Attack,
       knightEndurance :: Endurance
@@ -233,12 +248,12 @@ data Knight = Knight
 
 -- Experience is calculated based on the dragon type. A dragon can be
 --     either red, black or green.
-data DragonType 
+data DragonType
   = Red
   | Black
   | Green
 
-data Dragon = Dragon 
+data Dragon = Dragon
     {
       dragonType :: DragonType,
       dragonHealth :: Health,
@@ -250,7 +265,7 @@ data FigthResult
   | KnightWin Reward
   | KnightRun
 
-showFightResult :: FigthResult -> String 
+showFightResult :: FigthResult -> String
 showFightResult fightResult = case fightResult of
   KnightDead -> "Knight is dead"
   KnightRun -> "Knight run"
@@ -262,15 +277,15 @@ showFightResult fightResult = case fightResult of
   -- dracosha = Dragon Black 50 5
   -- showFightResult (dragonFight ivan dracosha)
 dragonFight :: Knight -> Dragon -> FigthResult
-dragonFight knigth dragon = fight 1 (dragonHealth dragon) (knightHealth knigth) 
-  where 
-    fight :: Int -> Health -> Attack -> FigthResult
-    fight strikeNo dHealth kHealth
+dragonFight knigth dragon = fight 1 (dragonHealth dragon) (knightHealth knigth)
+  where
+    fight :: Int -> Health -> Health -> FigthResult
+    fight strikeNo (Health dHealth) (Health kHealth)
       | dHealth <= 0 = KnightWin (reward dragon)
-      | knightEndurance knigth < strikeNo = KnightRun
+      | endurance (knightEndurance knigth) < strikeNo = KnightRun
       | kHealth <= 0 = KnightDead
-      | mod strikeNo 10 == 0 = fight (strikeNo + 1) (dHealth - knightAttack knigth) (kHealth - dragonFirePower dragon)
-      | otherwise = fight (strikeNo + 1) (dHealth - knightAttack knigth) kHealth
+      | mod strikeNo 10 == 0 = fight (strikeNo + 1) (Health (dHealth - attack (knightAttack knigth))) (Health (kHealth - attack (dragonFirePower dragon)))
+      | otherwise = fight (strikeNo + 1) (Health (dHealth - attack (knightAttack knigth))) (Health kHealth)
 
 -- Red dragons grant 100 experience points, black dragons — 150, and green — 250.
 
@@ -278,7 +293,7 @@ dragonFight knigth dragon = fight 1 (dragonHealth dragon) (knightHealth knigth)
 -- treasure except gold. So green dragons has only gold as reward.
 -- All other dragons always contain treasure in addition to gold.
 reward :: Dragon -> Reward
-reward dragon = case dragonType dragon of 
+reward dragon = case dragonType dragon of
   Red -> Reward (Chest 1000 (Just Gemstone)) 100
   Black -> Reward (Chest 2000 (Just Armor)) 150
   Green -> Reward (Chest 5000 Nothing) 250
@@ -302,11 +317,9 @@ False
 True
 -}
 isIncreasing :: [Int] -> Bool
-isIncreasing [] = True 
-isIncreasing (x:y:xs)
-  | x < y = isIncreasing (y:xs)
-  | otherwise = False
-isIncreasing _ = True 
+isIncreasing [] = True
+isIncreasing (x:y:xs) = x < y && isIncreasing (y:xs)
+isIncreasing _ = True
 
 {- | Implement a function that takes two lists, sorted in the
 increasing order, and merges them into new list, also sorted in the
@@ -319,11 +332,11 @@ verify that.
 [1,2,3,4,7]
 -}
 merge :: [Int] -> [Int] -> [Int]
-merge [] [] = []
 merge [] ys = ys
 merge xs [] = xs
 merge (x:xs) (y:ys)
   | x < y = x : merge xs (y : ys)
+  | x == y = x : y : merge xs ys
   | otherwise = y : merge (x : xs) ys
 
 {- | Implement the "Merge Sort" algorithm in Haskell. The @mergeSort@
@@ -341,7 +354,12 @@ The algorithm of merge sort is the following:
 [1,2,3]
 -}
 mergeSort :: [Int] -> [Int]
-mergeSort = error "TODO"
+mergeSort [] = []
+mergeSort [x] = [x]
+mergeSort [x, y] = if x < y then [x, y] else [y, x]
+mergeSort xs = let l = div (length xs) 2 in
+  merge (mergeSort (take l xs)) (mergeSort (drop l xs))
+
 
 
 {- | Haskell is famous for being a superb language for implementing
@@ -394,7 +412,21 @@ data EvalError
 It returns either a successful evaluation result or an error.
 -}
 eval :: Variables -> Expr -> Either EvalError Int
-eval = error "TODO"
+eval _ (Lit lit) = Right lit
+eval vars (Var var) = case lookup var vars of
+        Nothing -> Left (VariableNotFound var)
+        Just result -> Right result
+eval vars (Add expr1 expr2) = evalResult result1 result2
+  where
+    result1 = eval vars expr1
+    result2 = eval vars expr2
+
+    evalResult :: Either EvalError Int -> Either EvalError Int -> Either EvalError Int
+    evalResult (Left e) _ = Left e
+    evalResult _ (Left e) = Left e
+    evalResult (Right a) (Right b) = Right (a + b)
+
+
 
 {- | Compilers also perform optimizations! One of the most common
 optimizations is "Constant Folding". It performs arithmetic operations
@@ -418,4 +450,18 @@ Write a function that takes and expression and performs "Constant
 Folding" optimization on the given expression.
 -}
 constantFolding :: Expr -> Expr
-constantFolding = error "TODO"
+constantFolding expr = varsToExpr (collectVars expr (0, []))
+  where
+    varsToExpr :: (Int, [String]) -> Expr
+    varsToExpr (0, x:xs) = foldr (Add . Var) (Var x) xs
+    varsToExpr (i, []) = Lit i
+    varsToExpr (i, xs) = Add (varsToExpr (i, [])) (varsToExpr (0, xs))
+
+
+    collectVars :: Expr -> (Int, [String]) -> (Int, [String])
+    collectVars (Lit lit) vars = Data.Bifunctor.first (lit +) vars
+    collectVars (Var var) vars = Data.Bifunctor.second (var :) vars
+    collectVars (Add e1 e2) vars = (fst vars + fst result1 + fst result2, snd vars ++ snd result1 ++ snd result2)
+      where
+          result1 = collectVars e1 vars
+          result2 = collectVars e2 vars
