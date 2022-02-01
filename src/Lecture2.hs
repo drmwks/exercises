@@ -280,12 +280,15 @@ dragonFight :: Knight -> Dragon -> FigthResult
 dragonFight knigth dragon = fight 1 (dragonHealth dragon) (knightHealth knigth)
   where
     fight :: Int -> Health -> Health -> FigthResult
-    fight strikeNo (Health dHealth) (Health kHealth)
-      | dHealth <= 0 = KnightWin (reward dragon)
+    fight strikeNo dHealth kHealth
+      | health dHealth <= 0 = KnightWin (reward dragon)
       | endurance (knightEndurance knigth) < strikeNo = KnightRun
-      | kHealth <= 0 = KnightDead
-      | mod strikeNo 10 == 0 = fight (strikeNo + 1) (Health (dHealth - attack (knightAttack knigth))) (Health (kHealth - attack (dragonFirePower dragon)))
-      | otherwise = fight (strikeNo + 1) (Health (dHealth - attack (knightAttack knigth))) (Health kHealth)
+      | health kHealth <= 0 = KnightDead
+      | mod strikeNo 10 == 0 = fight (strikeNo + 1) (decreaseHealth (knightAttack knigth) dHealth) (decreaseHealth (dragonFirePower dragon) kHealth)
+      | otherwise = fight (strikeNo + 1) (decreaseHealth (knightAttack knigth) dHealth) kHealth
+
+decreaseHealth :: Attack -> Health -> Health
+decreaseHealth (Attack attack) (Health health) = Health (health - attack)
 
 -- Red dragons grant 100 experience points, black dragons — 150, and green — 250.
 
@@ -455,13 +458,15 @@ constantFolding expr = varsToExpr (collectVars expr (0, []))
     varsToExpr :: (Int, [String]) -> Expr
     varsToExpr (0, x:xs) = foldr (Add . Var) (Var x) xs
     varsToExpr (i, []) = Lit i
-    varsToExpr (i, xs) = Add (varsToExpr (i, [])) (varsToExpr (0, xs))
+    varsToExpr (i, x : xs) = Add (Lit i) (addVars x xs)
 
+    addVars :: String -> [String] -> Expr
+    addVars x = foldr (Add . Var) (Var x)
 
     collectVars :: Expr -> (Int, [String]) -> (Int, [String])
     collectVars (Lit lit) vars = Data.Bifunctor.first (lit +) vars
     collectVars (Var var) vars = Data.Bifunctor.second (var :) vars
-    collectVars (Add e1 e2) vars = (fst vars + fst result1 + fst result2, snd vars ++ snd result1 ++ snd result2)
+    collectVars (Add e1 e2) (accLit, accVars) = (accLit + lit1 + lit2, accVars ++ vars1 ++ vars2)
       where
-          result1 = collectVars e1 vars
-          result2 = collectVars e2 vars
+          (lit1, vars1) = collectVars e1 (accLit, accVars)
+          (lit2, vars2) = collectVars e2 (accLit, accVars)
