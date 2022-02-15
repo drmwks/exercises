@@ -294,7 +294,7 @@ Just 8
 Nothing
 >>> apply [1 .. 10] (Just (drop 7))
 Just [8,9,10]
->>> apply 5 [(+ 3), (* 4), dreverse functioniv 17]
+>>> apply 5 [(+ 3), (* 4), div 17]
 [8,20,3]
 
 -}
