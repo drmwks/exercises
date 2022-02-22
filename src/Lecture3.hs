@@ -85,7 +85,7 @@ Tuesday
 -}
 
 next :: (Enum a, Bounded a, Eq a) => a -> a
-next x = if x == maxBound `asTypeOf` x then minBound `asTypeOf` x else succ x
+next x = if x == maxBound then minBound else succ x
 
 {- | Implement a function that calculates number of days from the first
 weekday to the second.
@@ -137,7 +137,7 @@ instance Semigroup Reward where
 
 
 instance Monoid Reward where
-  mempty = Reward (Gold 0) False
+  mempty = Reward mempty False
 
 
 {- | 'List1' is a list that contains at least one element.
@@ -173,9 +173,8 @@ monsters, you should get a combined treasure and not just the first
   declaration.
 -}
 instance (Semigroup a) => Semigroup (Treasure a) where
-  NoTreasure <> NoTreasure = NoTreasure
-  (SomeTreasure t1) <> NoTreasure = SomeTreasure t1
-  NoTreasure <> (SomeTreasure t1) = SomeTreasure t1
+  NoTreasure <> x = x
+  x <> NoTreasure = x
   (SomeTreasure t1) <> (SomeTreasure t2) = SomeTreasure (t1 <> t2)
 
 
@@ -239,11 +238,9 @@ types that can have such an instance.
 
 instance Foldable List1 where
   foldr :: (a -> b -> b) -> b -> List1 a -> b
-  foldr f acc (List1 x []) = f x acc
   foldr f acc (List1 x xs) = f x (foldr f acc xs)
 
   foldMap :: Monoid m => (a -> m) -> List1 a -> m
-  foldMap f (List1 x []) = f x
   foldMap f (List1 x xs) = f x <> foldMap f xs
 
 
@@ -299,6 +296,4 @@ Just [8,9,10]
 
 -}
 apply :: Functor f => a -> f (a -> b) -> f b
-apply arg = fmap fn
-  where
-    fn ff = ff arg
+apply arg = fmap (\ff -> ff arg)
